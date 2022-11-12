@@ -1,8 +1,0 @@
---------------------------------------------------------------------------------------------------------------------------------
-Module: Fundamentals
-Topic: Procedures
-Problem: Toy Robot - Iteration 1
-
-State: Invited
-wtc-lms accept late-small-slide
-wtc-lms decline late-small-slide
