@@ -2,61 +2,88 @@ import os
 import subprocess
 import sys
 
+def setup():
+    """
+    create a script file that will setup helper to be run as [helper start]
+    """
+
+    #copy a bash script to the /.local/bin folder
+    #change the script permission to +x
+    #when the script is run it should run the python file
+    home = os.path.expanduser('~')
+
+    subprocess.run(['touch', 'helper.sh'])
+
+    with open('helper.sh', 'w') as file:
+        file.write(f'bin/python3 {home}/helper.py')
+
+    config_path = os.path.join(home, 'helper-config')
+    os.makedirs(config_path, exist_ok=True)
+    subprocess.run(['cp', './helper.py', config_path])
+
+    subprocess.run(['sudo','cp','./helper.sh', '/bin'])
+
 
 def start_project():
     '''
     when command is start, this function will execute the sequence to start a project
     '''
     #get project name and start the project
-    project_uiid = input('Enter the project uiid: ').lower().strip()
-    start_results = subprocess.run(['wtc-lms', 'start', project_uiid], stdout=subprocess.PIPE, text=True)
+    project_uiid = input( "Enter the project uiid: " ).lower().strip()
+    start_results = subprocess.run( ['wtc-lms', 'start', project_uiid] ,
+                                     stdout=subprocess.PIPE, text=True )
 
     if start_results.returncode == 0:
         #get information to create a directory for storing the project
-        print('\nProject successfully started, where to clone it?')
-        project_name = input("Project name (e.g. Mastermind): ").strip()
-        iteration = input('Which iteration? (1 - for iteration 1, 2 - for iteration 2, etc..): ').strip()
+        print( "\nProject successfully started, where to clone it?" )
+        project_name = input( "Project name (e.g. Mastermind): " ).strip()
+        iteration = input( "Which iteration? (1 - for iteration 1, 2 - for iteration 2, etc..): " ).strip()
 
         #set up the necessary folders 
-        iteration = f'iteration{iteration}'
+        iteration = f'iteration{ iteration }'
         home = os.path.expanduser('~')
         os.chdir(home) 
-        cwd = os.getcwd() + '/problems'
-        directory = os.path.join(cwd,project_name,iteration)
+        cwd = os.getcwd()
+        directory = os.path.join(cwd, 'problems', project_name, iteration)
 
         #get the project gitlab link and clone to the appropriate folder
         link_dump = start_results.stdout
         link_pos = link_dump.find('git')
-        commands_list = link_dump[link_pos:].strip().split()  
+        commands_list = link_dump[ link_pos: ].strip().split()  
 
-        clone_results = subprocess.run([commands_list[0], commands_list[1], commands_list[2], directory],
-                                         stdout= subprocess.PIPE , text=True)
+        clone_results = subprocess.run( [commands_list[0], commands_list[1], commands_list[2], directory] ,
+                                         stdout= subprocess.PIPE , text=True )
 
         if clone_results.returncode != 0:
-            print("\nDirectory already exists and it's not empty.")
-            print("\nThe directory will be opened with VS Code shortly..")
+            print( "\nDirectory already exists and it's not empty." )
+            print( "\nThe directory will be opened with VS Code shortly.." )
 
         #change to the folder and open it with vs code
         os.chdir(directory)
-        #subprocess.run(['code', directory])
+        subprocess.run(['code', directory])
     
     else:
-        print('\nFailed to start project. Please check the project uiid.')
+        print( "\nFailed to start project. Please check the project uiid." )
 
 def start_review():
+    '''
+    This function will execute when the user chooses the 'review' command for helper
+    '''
     review_results = subprocess.run(['wtc-lms', 'reviews'],  stdout= subprocess.PIPE, text=True)
     list_of_reviews= review_results.stdout.split('\n')
 
+
     for review in list_of_reviews:
+        #look for '[' in that line, only take lines with '[]' in them
         if review.find('[') > 0:
             start_pos = review.find('[')
             end_pos = review.find(']')
-            keyword = review[start_pos+1: end_pos]
+            keyword = review[start_pos+1: end_pos] #the word between the [] should be 'Invited'
 
-            if keyword == 'Assigned':
+            if keyword == 'Invited':
                 start_pos = review.find('(')
                 end_pos = review.find(')')
-                clone_name = review[start_pos+1: end_pos]
+                clone_name = review[start_pos+1: end_pos] #get the uiid for the project on gitlab
                 
                 clone_link_dump = subprocess.run(['wtc-lms','accept', clone_name],
                                          stdout=subprocess.PIPE, text=True)
@@ -65,12 +92,13 @@ def start_review():
                     reviewee_info = subprocess.run(['wtc-lms', 'review_details', clone_name],
                                             stdout=subprocess.PIPE, text=True)
 
-                    clone_link = clone_link_dump[clone_link_dump.find('git'):].strip()
-                    words_list = review.split('>')
-                    another_words_list = words_list[2].split('-')
-                    project_name = another_words_list[0].strip()
+                    clone_link = clone_link_dump[clone_link_dump.find('git'):].strip() #get the gitlab link from the dump
+                    words_list = review.split('>') #separate the lines by '>' character
+                    another_words_list = words_list[2].split('-') #take string from words_list[2] and separate them further
+                    project_name = another_words_list[0].strip() #the first el in another_worlds_list is the project name
                     iteration = f'iteration{another_words_list[1].split()[0].strip().split()[0]}'
-                    username = reviewee_info.stdout[reviewee_info.stdout.find('Submission'):].split('\n')[0].split(':')[1]
+                    username = reviewee_info.stdout[reviewee_info.stdout.find('Submission'):].split('\n')[0].split(':')[1] #get username 
+                    #from the reviewee_info_dump on a line that starts with Submission
                     username = username[:username.find('@')].strip()
 
 
@@ -114,12 +142,12 @@ def start_review():
 
 def check_login():
     '''
-    This function will check if the user is logged in on the wtc-lms
+    Check if user is logged in on the wtc-lms
     '''
     check_login = subprocess.run(['wtc-lms', 'problems'], stdout=subprocess.PIPE, text=True)
 
     if check_login.returncode != 0:
-        #get the user to login 
+        #Prompt the user to login before continuing
         print("Seems like you're not logged in. Let's get you logged in first..\n")
         logged = subprocess.run(['wtc-lms' ,'login'], stdout=subprocess.PIPE , text = True)
 
@@ -129,17 +157,16 @@ def check_login():
 
 def varify_command(command):
     '''
-    check if user entered the required command,
-    ask until user enters required command
+    Check if the command is known, if not get the user to enter a known command to helper
     '''
-    while command not in ['start', 'submit', 'review']:
-        print('Please command helper to do something( start - to start a project, review - to review  a project, submit - to submit a project)')
+    while command not in ['start', 'submit', 'review', 'setup']:
+        print( "Please command helper to do something( start - to start a project, review - to review  a project, submit - to submit a project)" )
         command = input('-- ').lower().strip()
     return command
 
 def match_command(command):
     '''
-    check command and call appropriate function based on command
+    match the command with it's function and call the function
     '''
     if command == 'start':
         start_project()
@@ -147,21 +174,24 @@ def match_command(command):
         start_review()
     elif command == 'submit':
         submit_project()
+    elif command == 'setup':
+        setup()
 
 def get_command():
     '''
-    after user logs in , run this function to get command
+    When the user is logged in, check for the command-line argument 
+    if it's there, run it through check
+    otherwise get it from user
     '''
-    print('Successfully Logged in, now checking commands...\n')
+    print( "Successfully Logged in, now checking commands...\n" )
 
-    if len(sys.argv) < 3 or len(sys.argv) > 3:
-        print('Please command helper to do something( start - to start a project, review - to review  a project, submit - to submit a project)')
-        command = input('-- ').lower().strip()
+    if len(sys.argv) != 3: #when there's more than or less than 3 arguments, argument wasnt entered
+        command = ''
         command = varify_command(command)
         match_command(command) 
 
     else:
-        command = sys.argv[2]
+        command = sys.argv[2] #the third elem in the command line should be the command
 
         command = varify_command(command)
         match_command(command)
