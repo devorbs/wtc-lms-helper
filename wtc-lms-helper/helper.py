@@ -1,3 +1,5 @@
+#! /usr/bin/python3
+
 import os
 import subprocess
 import sys
@@ -6,22 +8,22 @@ def setup():
     """
     create a script file that will setup helper to be run as [helper start]
     """
-
-    #copy a bash script to the /.local/bin folder
-    #change the script permission to +x
     #when the script is run it should run the python file
     home = os.path.expanduser('~')
 
-    subprocess.run(['touch', 'helper.sh'])
-
-    with open('helper.sh', 'w') as file:
-        file.write(f'bin/python3 {home}/helper.py')
-
+    #create helper-config folder
     config_path = os.path.join(home, 'helper-config')
     os.makedirs(config_path, exist_ok=True)
-    subprocess.run(['cp', './helper.py', config_path])
+    cwd = os.getcwd()
 
-    subprocess.run(['sudo','cp','./helper.sh', '/bin'])
+    #copy the helper.py to home/wethinkcode/helper-config folder
+    subprocess.run(['cp', f'{cwd}/helper.py', config_path])
+
+    #change the script permission to +x
+    subprocess.run(['chmod','+x',f'{config_path}/helper.py'])
+    os.system(f'ln {config_path}/helper.py {home}/.local/bin/helper') #link for file to bin folder
+
+    print("\n\nSetup complete!\n")
 
 
 def start_project():
@@ -45,6 +47,8 @@ def start_project():
         os.chdir(home) 
         cwd = os.getcwd()
         directory = os.path.join(cwd, 'problems', project_name, iteration)
+        config_folder = os.path.join(home,'helper-config', 'paths')
+        os.mkdir(config_folder)
 
         #get the project gitlab link and clone to the appropriate folder
         link_dump = start_results.stdout
@@ -57,6 +61,11 @@ def start_project():
         if clone_results.returncode != 0:
             print( "\nDirectory already exists and it's not empty." )
             print( "\nThe directory will be opened with VS Code shortly.." )
+        helper_path = os.path.join(directory, 'helper-info')
+        os.mkdir(helper_path)
+
+        os.system(f'echo "{directory}" >> {helper_path}/{project_uiid}.txt')
+        os.system(f'ln {helper_path}/{project_uiid}.txt {config_folder}/{project_uiid}')
 
         #change to the folder and open it with vs code
         os.chdir(directory)
@@ -104,8 +113,8 @@ def start_review():
 
                     home = os.path.expanduser('~')
                     os.chdir(home)
-                    cwd = os.getcwd() + '/reviews'
-                    directory = os.path.join(cwd, project_name, iteration, username)
+                    cwd = os.getcwd()
+                    directory = os.path.join(home, 'reviews', project_name, iteration, username)
 
                     cloning_results = subprocess.run([clone_link, directory], stdout=subprocess.PIPE, text=True)
 
@@ -138,7 +147,43 @@ def start_review():
                             continue
                         else:
                             exit()                       
-                        
+
+def submit_project():
+
+    home = os.path.expanduser('~')
+    config_folder = os.path.join(home,'helper-config', 'paths')
+
+    project_uiid = input("\nPlease enter the project uiid for the project you want to submit: ")
+    file_name = ''
+
+    with open(f'{config_folder}/{project_uiid}') as file:
+        file_name = file.readlines()
+
+    files = input('\nEnter the file names you want to push separated by a space: ').strip().split(" ")
+    file_path = file_name[0].strip()
+
+    os.chdir(file_path)  
+    #os.system(f'git add {files}')
+    for file in files:
+        add_results = subprocess.run(['git', 'add', file], stdout=subprocess.PIPE, text=True)
+        if add_results.returncode == 0:
+            continue
+        else:
+            print('\nSomething wrong with the files you entered.')
+
+    commit_message = ''
+    if add_results.returncode ==0:
+        commit_message = input("What's your commit message?: ")
+
+    subprocess.run(['git','commit','-m',f'"{commit_message}"'])
+
+    subprocess.run(['git', 'push'])
+
+    print("\nProject successfully pushed to gitlab..")
+
+    subprocess.run(['wtc-lms', 'grade', project_uiid])
+
+    subprocess.run(['wtc-lms', 'history', project_uiid])
 
 def check_login():
     '''
@@ -160,7 +205,7 @@ def varify_command(command):
     Check if the command is known, if not get the user to enter a known command to helper
     '''
     while command not in ['start', 'submit', 'review', 'setup']:
-        print( "Please command helper to do something( start - to start a project, review - to review  a project, submit - to submit a project)" )
+        print( "Please command helper to do something( start - to start a project, review - to review  a project, submit - to submit a project, setup - to set up helper")
         command = input('-- ').lower().strip()
     return command
 
@@ -185,13 +230,14 @@ def get_command():
     '''
     print( "Successfully Logged in, now checking commands...\n" )
 
-    if len(sys.argv) != 3: #when there's more than or less than 3 arguments, argument wasnt entered
+    if len(sys.argv) != 2: #when there's more than or less than 3 arguments, argument wasnt entered
         command = ''
         command = varify_command(command)
         match_command(command) 
 
     else:
-        command = sys.argv[2] #the third elem in the command line should be the command
+        command = sys.argv[1] #the third elem in the command line should be the command
+        
 
         command = varify_command(command)
         match_command(command)
