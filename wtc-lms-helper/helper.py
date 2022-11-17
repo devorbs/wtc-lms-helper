@@ -81,7 +81,6 @@ def start_review():
     review_results = subprocess.run(['wtc-lms', 'reviews'],  stdout= subprocess.PIPE, text=True)
     list_of_reviews= review_results.stdout.split('\n')
 
-
     for review in list_of_reviews:
         #look for '[' in that line, only take lines with '[]' in them
         if review.find('[') > 0:
@@ -89,34 +88,39 @@ def start_review():
             end_pos = review.find(']')
             keyword = review[start_pos+1: end_pos] #the word between the [] should be 'Invited'
 
-            if keyword == 'Invited':
+            if keyword == 'Assigned':
                 start_pos = review.find('(')
                 end_pos = review.find(')')
                 clone_name = review[start_pos+1: end_pos] #get the uiid for the project on gitlab
-                
+            
                 clone_link_dump = subprocess.run(['wtc-lms','accept', clone_name],
-                                         stdout=subprocess.PIPE, text=True)
+                                          stdout=subprocess.PIPE, text=True)
+                
+    
 
                 if clone_link_dump.returncode == 0:
                     reviewee_info = subprocess.run(['wtc-lms', 'review_details', clone_name],
                                             stdout=subprocess.PIPE, text=True)
 
-                    clone_link = clone_link_dump[clone_link_dump.find('git'):].strip() #get the gitlab link from the dump
+                    clone_link = clone_link_dump.stdout[clone_link_dump.stdout.find('git'):].strip() #get the gitlab link from the dump
+            
                     words_list = review.split('>') #separate the lines by '>' character
                     another_words_list = words_list[2].split('-') #take string from words_list[2] and separate them further
-                    project_name = another_words_list[0].strip() #the first el in another_worlds_list is the project name
-                    iteration = f'iteration{another_words_list[1].split()[0].strip().split()[0]}'
-                    username = reviewee_info.stdout[reviewee_info.stdout.find('Submission'):].split('\n')[0].split(':')[1] #get username 
-                    #from the reviewee_info_dump on a line that starts with Submission
+                    project_name = another_words_list[1][:another_words_list[1].find('(')].strip() #the first el in another_worlds_list is the project name
+                    
+                #     #iteration = f'iteration{another_words_list[1].split()[0].strip().split()[0]}'
+                    username = reviewee_info.stdout[reviewee_info.stdout.find('Submission'):].split('\n')[0].split(':')[1] #get username
+                #     #from the reviewee_info_dump on a line that starts with Submission
                     username = username[:username.find('@')].strip()
 
 
                     home = os.path.expanduser('~')
                     os.chdir(home)
                     cwd = os.getcwd()
-                    directory = os.path.join(home, 'reviews', project_name, iteration, username)
+                    directory = os.path.join(home, 'reviews', project_name, username)
 
                     cloning_results = subprocess.run([clone_link, directory], stdout=subprocess.PIPE, text=True)
+                
 
                     if cloning_results.returncode == 0:
                         print("\nReview started. Review info will be stored in the review folder.")
@@ -124,7 +128,7 @@ def start_review():
                         with open(f'{directory}/review_info.txt', 'a') as file:
                             file.write(reviewee_info.stdout)
                         
-                        #subprocess.run(['echo', f'"{cloning_results.stdout}"', '>', f'{directory}/review_info.txt'])
+                        subprocess.run(['echo', f'"{cloning_results.stdout}"', '>', f'{directory}/review_info.txt'])
 
                         os.chdir(directory)
                         subprocess.run(['code', directory], stdout=subprocess.PIPE, text=True)
@@ -136,7 +140,7 @@ def start_review():
 
                             subprocess.run(['wtc-lms', 'add_comment', clone_name, comment])
 
-                            complete_review = input("\nComplete Review? (yes/no): ").lower.strip()
+                            complete_review = input("\nComplete Review? (yes/no): ").lower().strip()
 
                             if complete_review == 'yes' or complete_review == 'y':
                                 subprocess.run(['wtc-lms', 'complete_review', clone_name])
