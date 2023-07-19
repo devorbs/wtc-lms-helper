@@ -1,8 +1,31 @@
 # wtc-lms-helper
-A script that automates the procedures for starting a project, submitting a project and completing reviews for other students at WeThinkCode_
+Overview
+The Automated CLI Tool for WeThinkCode Students is a powerful command line application that simplifies project management tasks for WeThinkCode students. It automates the process of project initiation, submission, and peer reviews, providing a streamlined workflow and enhancing overall efficiency.
 
-AVAILABLE COMMANDS:   
-#SETUP - This command will configure the helper appropriately and setup necessary folders.   
-#START - This command allows the user to start a project for that iteration using project uiid.  
-#SUBMIT - The user will be able to submit a project to a gitlab repo created by WTC_ using this command.   
-#REVIEW - The user will be able to start doing reviews for other students. This command will go through all 3 review sessions unless the user decides to stop.   
+This tool seamlessly integrates with the WeThinkCode command line tool (wtc-lms) and leverages technologies such as Python3, the subprocess module, and the os module to deliver a user-friendly and automated experience.
+
+# Features
+Project Initialization: Effortlessly start a project for the current iteration using the start command.
+Submission Automation: Submit your completed project to a GitLab repository created by WTC_ with a single command.
+Peer Review Initiator: Initiate review sessions for other students, fostering collaboration and knowledge sharing.
+Seamless Integration: The tool seamlessly integrates with the WeThinkCode command line tool (wtc-lms) for a cohesive experience.
+Efficient File Operations: The os module facilitates efficient file handling, such as directory creation and file compression.
+Technologies and Libraries Used
+Python3: The core programming language used for development.
+Subprocess Module: Enables integration with the WeThinkCode command line tool (wtc-lms).
+os Module: Facilitates efficient file and directory operations.
+
+# Usage
+Clone the repository: git clone https://github.com/yourusername/automated-cli-tool.git
+Navigate to the project directory: cd automated-cli-tool
+Install dependencies: pip install -r requirements.txt
+Run the tool setup: python main.py setup
+
+# Examples
+Start a project: helper start <project_uiid>
+Submit a project: helper submit <project_uiid>
+Initiate a peer review: helper review
+
+
+# About the Author
+This tool is developed by Bokang Makibinye.   
