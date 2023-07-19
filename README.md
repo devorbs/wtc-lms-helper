@@ -23,10 +23,9 @@ This tool seamlessly integrates with the WeThinkCode command line tool (wtc-lms)
 4. Run the tool setup command: `python main.py setup`
 
 ## Examples
-- Start a project: `python main.py start <project_uiid>`
-- Submit a project: `python main.py submit <project_uiid>`
-- Initiate a peer review: `python main.py review`
-- Stop the peer review process: `python main.py review stop`
+- Start a project: `helper start <project_uiid>`
+- Submit a project: `helper submit <project_uiid>`
+- Initiate a peer review: `helper review`
 
 ## About the Author
 This tool is developed and maintained by [Bokang Makibinye](https://github.com/devorbs).
